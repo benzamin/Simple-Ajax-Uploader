@@ -665,10 +665,12 @@ ss.SimpleUpload = function( options ) {
         onBlankSubmit: function() {},
         onAbort: function( filename, uploadBtn, size ) {},
         onChange: function( filename, extension, uploadBtn, size, file ) {},
+        onFileSelectDone: function( filenames, uploadBtn, totalFiles ) {},
         onSubmit: function( filename, extension, uploadBtn, size ) {},
         onProgress: function( pct ) {},
         onUpdateFileSize: function( filesize ) {},
         onComplete: function( filename, response, uploadBtn, size ) {},
+        onAllComplete: function() {},
         onExtError: function( filename, extension ) {},
         onSizeError: function( filename, fileSize ) {},
         onError: function( filename, type, status, statusText, response, uploadBtn, size ) {},
@@ -1607,7 +1609,7 @@ ss.XhrUpload = {
         if ( !this._opts.multiple ) {
             total = 1;
         }
-
+        var fileNames = [];
         for ( i = 0; i < total; i++ ) {
             filename = ss.getFilename( files[i].name );
             ext = ss.getExt( filename );
@@ -1616,7 +1618,7 @@ ss.XhrUpload = {
             if ( false === this._opts.onChange.call( this, filename, ext, this._overBtn, size, files[i] ) ) {
                 return false;
             }
-
+            fileNames.push(filename);
             this._queue.push({
                 id: ss.getUID(),
                 file: files[i],
@@ -1627,6 +1629,10 @@ ss.XhrUpload = {
             });
         }
 
+        if ( false === this._opts.onFileSelectDone.call( this, fileNames.join(", "), this._overBtn, this._queue.length)) {
+            this.clearQueue();
+            return false;
+        };
         return true;
     },
 
@@ -2038,7 +2044,11 @@ ss.extendObj( ss.SimpleUpload.prototype, {
             }
 
         // Otherwise just go to the next upload as usual
-        } else {
+        }
+        else if(this._queue.length === 0 && this._active === 0 ){//All done
+            this._opts.onAllComplete.call(this);
+        }
+         else {
             this._cycleQueue();
         }
     },
